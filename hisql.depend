@@ -1,0 +1,66 @@
+# depslib dependency file v1.0
+1446193212 source:e:\github\hisql\main.cpp
+	<iostream>
+	<fstream>
+	<list>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<time.h>
+	"Commander.h"
+
+1446192865 source:e:\github\hisql\src\commander.cpp
+	<iostream>
+	<stdio.h>
+	<ctype.h>
+	<string.h>
+	<io.h>
+	"Commander.h"
+
+1446188895 e:\github\hisql\include\commander.h
+	"Table.h"
+	"Database.h"
+
+1446185399 source:e:\github\hisql\src\database.cpp
+	"Database.h"
+
+1445936290 e:\github\hisql\include\database.h
+	"common.h"
+	"Table.h"
+
+1446184989 source:e:\github\hisql\src\table.cpp
+	<iostream>
+	<fstream>
+	<string>
+	<iomanip>
+	<stdlib.h>
+	<string.h>
+	"Table.h"
+
+1446028834 e:\github\hisql\include\table.h
+	"common.h"
+
+1446178302 source:e:\github\hisql\src\common.cpp
+	<iostream>
+	<iomanip>
+	<list>
+	<vector>
+	<stdio.h>
+	<ctype.h>
+	<stdlib.h>
+	<string.h>
+	<time.h>
+	<io.h>
+	"common.h"
+
+1446192101 e:\github\hisql\include\common.h
+	<iostream>
+	<list>
+	<vector>
+
+1445684827 source:e:\github\hisql\src\resultset.cpp
+	"ResultSet.h"
+
+1445684863 e:\github\hisql\include\resultset.h
+	"common.h"
+
