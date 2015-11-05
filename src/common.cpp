@@ -44,19 +44,28 @@ void g_plog(int num, Status st, char const * code, string custom, int line)
     case 1007:
         sprintf(content, "Can't create database '%s'; database exists\n", custom.c_str());
         break;
+    case 1046:
+        sprintf(content, "No database selected\n");
+        break;
+    case 1049:
+        sprintf(content, "Unknown database '%s'\n", custom.c_str());
+        break;
+    case 1051:
+        sprintf(content, " Unknown table '%s'\n", custom.c_str());
+        break;
     case 1064:
         sprintf(content, "You have an error in your SQL syntax; \
 check the manual that corresponds to your HiSQL server version for\
  the right syntax to use near '%s' at line %d\n", custom.c_str(), line);
         break;
-    case 1049:
-        sprintf(content, "Unknown database '%s'\n", custom.c_str());
-        break;
-    case 1046:
-        sprintf(content, "No database selected\n");
+    case 1091:
+        sprintf(content, "Can't DROP '%s'; check that column/key exists\n", custom.c_str());
         break;
     case 1146:
         sprintf(content, "Table '%s' doesn't exist\n", custom.c_str());
+        break;
+    case 9999:
+        sprintf(content, "Table '%s' file can't read\n", custom.c_str());
         break;
     default:
         return;
@@ -177,6 +186,53 @@ void g_print_table(vector<string> &target, int col = 1)
     cout << line << endl;
 
     return;
+}
+
+void g_print_dataset(DataSet &ds)
+{
+    int rowsize = ds.size();
+
+    if (rowsize < 1)
+    {
+        cout << "Empty." << endl;
+        return;
+    }
+
+    int colsize = ds.front().size();
+    vector<string> printtab;
+    DataSet::iterator beg, end = ds.end();
+    while (beg != end)
+    {
+        for (int i = 0; i < colsize; ++i)
+        {
+            printtab.push_back((*beg).at(i));
+        }
+        ++beg;
+    }
+    g_print_table(printtab, colsize);
+}
+
+string g_rand_string(int min, int max)
+{
+    string x("");
+    int len = g_rand(min, max);
+    for (int j = 0; j < len; ++j)
+    {
+        int type = rand() % 100;
+        if (type < 30)
+        {
+            x += (char)(g_rand('0', '9'));
+        }
+        else if (type > 30 && type < 60)
+        {
+            x += (char)(g_rand('A', 'Z'));
+        }
+        else
+        {
+            x += (char)(g_rand('a', 'z'));
+        }
+    }
+    return x;
 }
 
 int g_rand_strings(vector<string> &target,

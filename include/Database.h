@@ -4,6 +4,8 @@
 #include "common.h"
 #include "Table.h"
 
+typedef list<Table> TableList;
+
 class Database
 {
 public:
@@ -16,12 +18,12 @@ public:
 
     Table* getTable(string tabname);
     Table* addTable(string tabname);
-    void renameTable(string tabname, string newname);
-    void removeTable(string tabname);
+    int renameTable(string tabname, string newname);
+    int removeTable(string tabname);
     void printTables();
 private:
     string name;
-    list<Table> m_tables;
+    TableList m_tables;
 };
 
 #endif // DATABASE_H

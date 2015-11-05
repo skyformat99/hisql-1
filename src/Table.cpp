@@ -38,21 +38,14 @@ void Table::setName(string tabname)
     name = tabname;
 }
 
-list<vector<char *> >::iterator Table::getFirstRowIte()
+DataSet::iterator Table::getRowIte()
 {
-    this->it = this->m_data_array.begin();
-    return it;
+    return this->m_data_array.begin();
 }
 
-list<vector<char *> >::iterator Table::getNextRowIte()
+bool Table::IteEnd(DataSet::iterator it)
 {
-    ++this->it;
-    return it;
-}
-
-bool Table::IteEnd()
-{
-    if (this->it == this->m_data_array.end()) return true;
+    if (it == this->m_data_array.end()) return true;
     return false;
 }
 
@@ -66,7 +59,7 @@ char* Table::getData(int row, int col)
 {
     if (row >= countRow() || col >= countCol()) return NULL;
 
-    list<vector<char *> >::iterator beg = this->m_data_array.begin();
+    DataSet::iterator beg = this->m_data_array.begin();
 
     for (int i = 0; i <= row; ++i)
     {
@@ -81,14 +74,14 @@ char* Table::getData(int row, int col)
  * @param   arow a row
  * @return       list<char *>*
  */
-vector<char *>* Table::pushRow(vector<string> &arow)
+Row* Table::pushRow(vector<string> &arow)
 {
     if ((int)arow.size() == countCol())
     {
-        vector<char *> tmprow;
+        Row tmprow;
         int i = 0;
 
-        list<Column>::iterator beg, end = this->m_col_list.end();
+        ColumnList::iterator beg, end = this->m_col_list.end();
         for (beg = this->m_col_list.begin(); beg != end; ++beg)
         {
             /// check data
@@ -109,9 +102,9 @@ vector<char *>* Table::pushRow(vector<string> &arow)
     }
 }
 
-vector<char *>* Table::getRow(int row)
+Row* Table::getRow(int row)
 {
-    list<vector<char *> >::iterator beg = this->m_data_array.begin();
+    DataSet::iterator beg = this->m_data_array.begin();
 
     for (int i = 0; i <= row; ++i)
     {
@@ -121,7 +114,7 @@ vector<char *>* Table::getRow(int row)
     return NULL;
 }
 
-bool Table::printRow(list<vector<char *> >::iterator it)
+bool Table::printRow(DataSet::iterator it)
 {
     int tsize = countCol();
     for (int i = 0; i < tsize; ++i)
@@ -132,14 +125,14 @@ bool Table::printRow(list<vector<char *> >::iterator it)
     return true;
 }
 
-bool Table::removeRow(list<vector<char *> >::iterator it)
+bool Table::removeRow(DataSet::iterator it)
 {
     list<vector<char *> >::iterator target = it;
     this->m_data_array.erase(target);
     return true;
 }
 
-bool Table::makeRowString(list<vector<char *> >::iterator &it, vector<string> &tmp)
+bool Table::makeRowString(DataSet::iterator &it, vector<string> &tmp)
 {
     int tsize = countCol();
     for (int i = 0; i < tsize; ++i)
@@ -151,11 +144,11 @@ bool Table::makeRowString(list<vector<char *> >::iterator &it, vector<string> &t
 
 vector<char *> Table::removeRowByNum(int no)
 {
-    list<vector<char *> >::iterator head = getFirstRowIte();
+    DataSet::iterator head = getRowIte();
 
     int i = 0;
 
-    while (! IteEnd())
+    while (! IteEnd(head))
     {
         if (i == no)
         {
@@ -163,9 +156,9 @@ vector<char *> Table::removeRowByNum(int no)
             return *head;
         }
         ++i;
-        head = getNextRowIte();
+        ++head;
     }
-    return vector<char *>();
+    return Row();
 }
 
 /**
@@ -197,7 +190,7 @@ void Table::showColumns()
     tmp.push_back("Default");
     tmp.push_back("Extra");
 
-    list<Column>::iterator beg, end = this->m_col_list.end();
+    ColumnList::iterator beg, end = this->m_col_list.end();
 
     for (beg = this->m_col_list.begin(); beg != end; ++beg)
     {
@@ -242,14 +235,51 @@ int Table::writeFile()
     ofstream out(m_file_path.c_str(), ios::binary);
     if (out.is_open())
     {
-        int rowlong = countRow();
+        out.seekp(0);
+        int rowlong = countRow(), collong = countCol();
+        /// set data locate
+        long dataloc = 0;
+        out.write((char*)&dataloc, sizeof(long));
+        /// write a integer
+        out.write((char*)&collong, sizeof(int));
+        ColumnList::iterator cbeg, cend = this->m_col_list.end();
+        for (cbeg = this->m_col_list.begin(); cbeg != cend; ++cbeg)
+        {
+            /// write field
+            out.write((*cbeg).field, FIELD_MAX_SIZE * sizeof(char));
+
+            char tmp = '\0';
+            /// write unsigned
+            tmp = ((*cbeg).u_sign) ? 'U' : 'S';
+            out.write(&tmp, sizeof(char));
+            /// write type
+            switch((*cbeg).type)
+            {
+            case INT: tmp = 'I';break;
+            case FLOAT: tmp = 'F';break;
+            default: tmp = 'C';break;
+            }
+            out.write(&tmp, sizeof(char));
+            /// write length
+            out.write((char*)&(*cbeg).length, sizeof(int));
+            /// write key
+            out.write((*cbeg).key, KEY_TYPE_SIZE * sizeof(char));
+            /// write null
+            out.write((*cbeg).null, NULL_TYPE_SIZE * sizeof(char));
+            /// write default value
+            out.write((*cbeg).default_val, (*cbeg).length * sizeof(char));
+            /// write default value
+            out.write((*cbeg).extra, EXTRA_MAX_SIZE * sizeof(char));
+        }
+        /// get the data locate
+        dataloc = out.tellp();
+        /// 00 00 00 00 : 32bit row length
         out.write((char*)&rowlong, sizeof(int));
-        //long ip = out.tellp();
-        list<vector<char *> >::iterator beg, end = this->m_data_array.end();
+        DataSet::iterator beg, end = this->m_data_array.end();
         for (beg = this->m_data_array.begin(); beg != end; ++beg)
         {
             int i = 0;
-            list<Column>::iterator ibeg, iend = this->m_col_list.end();
+            ColumnList::iterator ibeg, iend = this->m_col_list.end();
             for (ibeg = this->m_col_list.begin(); ibeg != iend; ++ibeg)
             {
                 //out << setw((*ibeg).length) << (*beg).at(i++);
@@ -261,7 +291,8 @@ int Table::writeFile()
             //out << '\n';
             //out.seekp(ip);
         }
-
+        out.seekp(0);
+        out.write((char*)&dataloc, sizeof(long));
         out.close();
         return 0;
     }
@@ -273,12 +304,56 @@ int Table::readFile()
     ifstream in(m_file_path.c_str());
     if (in.is_open())
     {
-        //long ip = in.tellg();
+        if (in.eof())
+        {
+            return -1;
+        }
+        in.seekg(0);
+        /// get data set locate
+        long dataloc = 0;
+        in.read((char*)&dataloc, sizeof(long));
+        /// get col long
+        int collong = 0;
+        in.read((char*)&collong, sizeof(int));
+        /// clear all
+        m_col_list.clear();
+        for (int i = 0; i < collong; ++i)
+        {
+            Column col;
+            /// read field
+            in.read(col.field, FIELD_MAX_SIZE * sizeof(char));
+
+            char tmp = '\0';
+            /// read unsigned
+            in.read(&tmp, sizeof(char));
+            col.u_sign = (tmp == 'U') ? true : false;
+            /// read type
+            in.read(&tmp, sizeof(char));
+            switch(tmp)
+            {
+            case 'I': col.type = INT;break;
+            case 'F': col.type = FLOAT;break;
+            default: col.type = CHAR;break;
+            }
+            /// read length
+            in.read((char*)&col.length, sizeof(int));
+            /// read key
+            in.read(col.key, KEY_TYPE_SIZE * sizeof(char));
+            /// read null
+            in.read(col.null, NULL_TYPE_SIZE * sizeof(char));
+            /// read default value
+            col.default_val = new char[col.length];
+            in.read(col.default_val, col.length * sizeof(char));
+            /// read default value
+            in.read(col.extra, EXTRA_MAX_SIZE * sizeof(char));
+            /// add to list
+            this->addField(col);
+        }
+        /// get row long
         int rowlong;
         in.read((char*)&rowlong, sizeof(int));
-
+        /// clear all
         m_data_array.clear();
-
         for (int i = 0; i < rowlong; ++i)
         {
             vector<char *> tmp;
@@ -397,7 +472,7 @@ void Table::setField(string field, ModType mod, string str)
  */
 bool Table::removeField(string field)
 {
-    list<Column>::iterator beg, end = m_col_list.end();
+    ColumnList::iterator beg, end = m_col_list.end();
     int i = 0;
     for (beg = m_col_list.begin(); beg != end; ++beg)
     {
@@ -405,7 +480,7 @@ bool Table::removeField(string field)
         {
             m_col_list.erase(beg);
             /// remove field in data array
-            list<vector<char *> >::iterator dbeg, dend = this->m_data_array.end();
+            DataSet::iterator dbeg, dend = this->m_data_array.end();
             for (dbeg = this->m_data_array.begin(); dbeg != dend; ++dbeg)
             {
                 (*dbeg).erase((*dbeg).begin() + i);
@@ -431,6 +506,31 @@ bool Table::addField(Column acol)
         m_col_list.push_back(acol);
         return true;
     }
-    cout << "field '" << acol.field << "' is exists!" << endl;
     return false;
 }
+
+int Table::setFields(ColumnList& col)
+{
+    if (countCol() > 0)
+    {
+        this->m_col_list.clear();
+    }
+
+    if (countRow() > 0)
+    {
+        this->m_data_array.clear();
+    }
+
+    ColumnList::iterator beg = this->m_col_list.begin(), end = this->m_col_list.end();
+    while (beg != end)
+    {
+        if ( ! addField(*beg))
+        {
+            return -1;
+        }
+        ++beg;
+    }
+    return 0;
+}
+
+

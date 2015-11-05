@@ -40,26 +40,25 @@ public:
      */
     char *getData(int row, int col);
 
-    list<vector<char *> >::iterator getFirstRowIte();
-    list<vector<char *> >::iterator getNextRowIte();
-    bool IteEnd();
+    DataSet::iterator getRowIte();
+    bool IteEnd(DataSet::iterator it);
 
     /**
      * push_back a row to the data_array
      * @param   arow a row
      * @return       list<char *>*
      */
-    vector<char *>* pushRow(vector<string> &arow);
+    Row* pushRow(vector<string> &arow);
 
-    vector<char *>* getRow(int row);
+    Row* getRow(int row);
 
-    bool printRow(list<vector<char *> >::iterator it);
+    bool printRow(DataSet::iterator it);
 
-    bool removeRow(list<vector<char *> >::iterator it);
+    bool removeRow(DataSet::iterator it);
 
-    bool makeRowString(list<vector<char *> >::iterator &it, vector<string> &tmp);
+    bool makeRowString(DataSet::iterator &it, vector<string> &tmp);
 
-    vector<char *> removeRowByNum(int no);
+    Row removeRowByNum(int no);
 
     /**
      * return the row size
@@ -107,12 +106,14 @@ public:
      * @return       if done then true
      */
     bool addField(Column acol);
+
+    int setFields(ColumnList& col);
 private:
     string name;
 
-    list<vector<char *> > m_data_array;
+    DataSet m_data_array;
 
-    list<Column> m_col_list;
+    ColumnList m_col_list;
 };
 
 #endif // TABLE_H
