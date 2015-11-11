@@ -392,6 +392,21 @@ Column* Table::getField(string field)
     return NULL;
 }
 
+int Table::getFieldLoc(string field)
+{
+    list<Column>::iterator beg, end = m_col_list.end();
+    int i = 0;
+    for (beg = m_col_list.begin(); beg != end; ++beg)
+    {
+        if (strcmp((*beg).field, field.c_str()) == 0)
+        {
+            return i;
+        }
+        ++i;
+    }
+    return -1;
+}
+
 /**
  * set field's value
  * @param field field's name

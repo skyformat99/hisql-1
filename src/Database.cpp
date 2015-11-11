@@ -59,12 +59,13 @@ Table* Database::addTable(string tabname)
         {
             if (remove(path.c_str()) == 0)
             {
-                /// just new a table
-                Table atab(tabname, name);
-                this->m_tables.push_back(atab);
-                return &this->m_tables.back();
+                return NULL;
             }
         }
+        /// just new a table
+        Table atab(tabname, name);
+        this->m_tables.push_back(atab);
+        return &this->m_tables.back();
     }
     return NULL;
 }
@@ -105,4 +106,16 @@ int Database::removeTable(string tabname)
         if (remove(path.c_str()) != 0)
             return -1;
     return 0;
+}
+
+void Database::printTables()
+{
+    vector<string> tmp;
+    tmp.push_back("Table_in_" + name);
+    TableList::iterator beg, end = this->m_tables.end();
+    for (beg = this->m_tables.begin(); beg!= end; ++beg)
+    {
+        tmp.push_back((*beg).getName());
+    }
+    g_print_table(tmp, 1);
 }

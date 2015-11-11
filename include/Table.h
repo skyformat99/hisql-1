@@ -10,8 +10,6 @@ public:
 
     string m_dbname;
 
-    list<vector<char *> >::iterator it;
-
     /** Default constructor */
     Table();
 
@@ -84,6 +82,7 @@ public:
      * @return       pointer to the column
      */
     Column *getField(string field);
+    int getFieldLoc(string field);
 
     /**
      * set field's value

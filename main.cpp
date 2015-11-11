@@ -11,7 +11,10 @@
 
 using namespace std;
 
-void recursive (vector<vector<string> > &dimValue, vector<vector<string> > &result, int layer, vector<string> &curList)
+void recursive (vector<vector<string> > &dimValue,
+                vector<vector<string> > &result,
+                int layer,
+                vector<string> &curList)
 {
     if (layer < (int)dimValue.size() - 1)
     {
@@ -76,11 +79,11 @@ int main()
         dimValue.push_back(list4);
 
         vector<vector<string> > recursiveResult;
-        /// µİ¹éÊµÏÖµÑ¿¨¶û»ı
+        /// é€’å½’å®ç°ç¬›å¡å°”ç§¯
         vector<string> tmp;
         recursive(dimValue, recursiveResult, 0, tmp);
 
-        cout << "µİ¹éÊµÏÖµÑ¿¨¶û³Ë»ı: ¹² " << recursiveResult.size() << " ¸ö½á¹û" << endl;
+        cout << "é€’å½’å®ç°ç¬›å¡å°”ä¹˜ç§¯: å…± " << recursiveResult.size() << " ä¸ªç»“æœ" << endl;
 
         for (size_t i = 0; i < recursiveResult.size(); ++i) {
             for (size_t j = 0; j < recursiveResult.at(i).size(); ++j) {
