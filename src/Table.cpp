@@ -49,6 +49,17 @@ bool Table::IteEnd(DataSet::iterator it)
     return false;
 }
 
+ColumnList::iterator Table::getColIte()
+{
+    return this->m_col_list.begin();
+}
+
+bool Table::colIteEnd(ColumnList::iterator it)
+{
+    if (it == this->m_col_list.end()) return true;
+    return false;
+}
+
 /**
  * get data pointer
  * @param   row the row locate
@@ -84,7 +95,6 @@ Row* Table::pushRow(vector<string> &arow)
         ColumnList::iterator beg, end = this->m_col_list.end();
         for (beg = this->m_col_list.begin(); beg != end; ++beg)
         {
-            /// check data
             char * tmp = new char[(*beg).length];
             strcpy(tmp, arow.at(i).c_str());
             tmprow.push_back(tmp);
@@ -142,7 +152,7 @@ bool Table::makeRowString(DataSet::iterator &it, vector<string> &tmp)
     return true;
 }
 
-vector<char *> Table::removeRowByNum(int no)
+Row Table::removeRowByNum(int no)
 {
     DataSet::iterator head = getRowIte();
 
@@ -519,6 +529,14 @@ bool Table::addField(Column acol)
     if (tcol == NULL)
     {
         m_col_list.push_back(acol);
+        DataSet::iterator it = getRowIte();
+        while (! IteEnd(it))
+        {
+            char *x;
+            x = new char[acol.length];
+            (*it).push_back(x);
+            ++it;
+        }
         return true;
     }
     return false;
@@ -536,7 +554,7 @@ int Table::setFields(ColumnList& col)
         this->m_data_array.clear();
     }
 
-    ColumnList::iterator beg = this->m_col_list.begin(), end = this->m_col_list.end();
+    ColumnList::iterator beg = col.begin(), end = col.end();
     while (beg != end)
     {
         if ( ! addField(*beg))

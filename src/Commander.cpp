@@ -29,6 +29,7 @@ Commander::~Commander()
 
 Database* Commander::loadDB(string dbname)
 {
+
     list<Database>::iterator beg = this->databases.begin(), end = this->databases.end();
 
     for (; beg != end; ++beg)
@@ -166,8 +167,6 @@ void Commander::exec()
     vector<string> select_tables;      /// select multiple table
     vector<string> select_fields;      /// select multiple fields
     vector<string> select_conditions;  /// select multiple conditions
-    char const *cmp[] = {"=", ">", "<", ">=", "<="};
-    char const *lgc[] = {"AND", "OR"};
     Column * altercol;      /// alter one column
     ColumnList createtab;   /// to create a new tab
     vector<string> insert_field;  /// field for insert
@@ -248,15 +247,62 @@ void Commander::exec()
     else if (str == "create") /// CREATE...
     {
         p = g_getword(p, str, true);
-        if (str == "table") /// CREATE TABLE...
+        if (str == "database") /// CREATE DATABASE...
         {
-            p = g_getword_mod(p, str, true, ' ', '('); /// get table name
+            p = g_getword(p, str, false);
+            e_opt_db = loadDB(str);
+            if (e_opt_db != NULL)
+            {
+                cout << "Database exist!" << endl;
+                return;
+            }
+            something = str;
+            opt = OPT_CREATE_DATABASE;
+        }
+        else if (str == "table") /// CREATE TABLE...
+        {
+            p = g_getword(p, str, false); /// get table name
+            g_trim(str, ' ');
+            something = str;
+            if (str.find('.') != string::npos)
+            {
+                something = str.substr(0, str.find('.'));
+                str = str.substr(str.find('.') + 1);
+                e_opt_db = loadDB(something);
+            }
+            else
+            {
+                e_opt_db = CURRENT_DB;
+            }
+            if (e_opt_db == NULL)
+            {
+                g_plog(1051, S_ERROR, "42S02", something + "." + str, 0);
+                return;
+            }
+            while (getline(cin, str)) /// just to the end
+            {
+                if (str == ";") break;
+                Column acol;
+                if (!g_convert_col(str, acol))
+                {
+                    cout << "Can not set this column" << endl;
+                    return;
+                }
+                createtab.push_back(acol);
+            }
+            opt = OPT_CREATE_TABLE;
+            /**
             str = g_trim(str, ' '); /// shift space
             if (str[0] == '`' && str[str.length() - 1] == '`') /// shift dot
             {
                 g_shiftdot(str, '`'); /// just shift it
             }
             something = str;
+            if (*p == '\0')
+            {
+                cout << "ERROR" << endl;
+                return;
+            }
             if (*p == '(') /// if has some col
             {
                 Column acol;
@@ -279,9 +325,10 @@ void Commander::exec()
                     g_convert_col(str, acol);
                     createtab.push_back(acol);
                 }
-            }
-            opt = OPT_CREATE_TABLE;
+                opt = OPT_CREATE_TABLE;
+            */
         }
+
         else if (str == "view")/// CREATE VIEW...
         {
             p = g_getword(p, str, false);
@@ -316,25 +363,20 @@ void Commander::exec()
         {
             p = g_getword(p, str, false);
             g_trim(str, ' ');
-            if (CURRENT_DB == NULL)
+            if (str.find('.') != string::npos)
             {
-                if (str.find('.') == string::npos) /// can't find db
-                {
-                    g_plog(1046, S_ERROR, "3D000", str, 0);
-                    return;
-                }
-                string dbname = str.substr(0, str.find('.'));
-                e_opt_db = loadDB(dbname);
+                something = str.substr(0, str.find('.'));
                 str = str.substr(str.find('.') + 1);
-                if (e_opt_db == NULL)
-                {
-                    g_plog(1051, S_ERROR, "42S02", dbname + "." + str, 0);
-                    return;
-                }
+                e_opt_db = loadDB(something);
             }
             else
             {
                 e_opt_db = CURRENT_DB;
+            }
+            if (e_opt_db == NULL)
+            {
+                g_plog(1051, S_ERROR, "42S02", something + "." + str, 0);
+                return;
             }
             e_opt_tab = e_opt_db->getTable(str);
             if (e_opt_tab == NULL)
@@ -390,110 +432,40 @@ void Commander::exec()
         if (str == "into") /// INSERT INTO
         {
             str = "";
-            while (*p != '(' && *p != ' ' && *p != '\0')
-            {
-                str += *p;
-                ++p;
-            }
+            p = g_getword(p, str, false);
             /// find db
-            if (CURRENT_DB == NULL)
+            if (str.find('.') != string::npos)
             {
-                string dbname;
-                if (str.find('.') == string::npos)
-                {
-                    g_plog(1046, S_ERROR, "3D000", str, 0);
-                    return;
-                }
-                dbname = str.substr(0, str.find('.'));
+                something = str.substr(0, str.find('.'));
                 str = str.substr(str.find('.') + 1);
-                e_opt_db = loadDB(dbname);
+                e_opt_db = loadDB(something);
             }
             else
             {
                 e_opt_db = CURRENT_DB;
             }
-            /// set opt table
-            e_opt_tab = e_opt_db->getTable(str);
-            if (e_opt_tab == NULL)
+            if (e_opt_db == NULL)
             {
-                g_plog(1051, S_ERROR, "42S02", e_opt_db->getName() + "." + str, 0);
+                g_plog(1051, S_ERROR, "42S02", something + "." + str, 0);
                 return;
             }
-            /// shift space
-            while (*p == ' ') ++p;
-            /// if INSERT INTO SOME_TAB (...)
-            if (*p == '(')
+            e_opt_tab = e_opt_db->getTable(str);
+            if (e_opt_db == NULL)
             {
-                ++p;
-                p = g_getword_mod(p, str, false, ' ', ')');
-                if (*p != ')')
-                {
-                    has_error = true;
-                }
-                string field = "";
-                char buff[BUFFSIZE];
-                strcpy(buff, str.c_str());
-                char *q = buff;
-                while (*q != '\0')
-                {
-                    if (*q == ',' || *(q + 1) == '\0')
-                    {
-                        if (*(q + 1) == '\0') field += *q;
-                        insert_field.push_back(field);
-                        field.clear();
-                    }
-                    if (*q != ' ' && *q != ',')field += *q;
-                    ++q;
-                }
-                for (int i = 0; i < insert_field.size(); i ++)
-                {
-                    cout << insert_field.at(i) << endl;
-                }
-                ++p;
+                g_plog(1051, S_ERROR, "42S02", something + "." + str, 0);
+                return;
             }
-            if (*p != '\0')
+            while (getline(cin, str))
             {
-                /// full field insert
-                p = g_getword_mod(p, str, false, ' ', '(');
-                g_trim(str, ' ');
-                if (*p != '\0')
-                {
-                    ++p;
-                    if (str == "values") /// INSERT INTO TAB (FIELD, FIELD) VALUES...
-                    {
-                        p = g_getword_mod(p, str, false, ' ', ')');
-                        if (*p != ')')
-                        {
-                            has_error = true;
-                        }
-                        /// get all values
-                        string field = "";
-                        char buff[BUFFSIZE];
-                        strcpy(buff, str.c_str());
-                        char *q = buff;
-                        while (*q != '\0')
-                        {
-                            if (*q == ',' || *(q + 1) == '\0')
-                            {
-                                if (*(q + 1) == '\0') field += *q;
-                                insert_value.push_back(field);
-                                field.clear();
-                            }
-                            if (*q != ' ' && *q != ',')field += *q;
-                            ++q;
-                        }
-                        for (int i = 0; i < insert_value.size(); i ++)
-                        {
-                            cout << insert_value.at(i) << endl;
-                        }
-                        ++p;
-                        /// shift space
-                        while (*p == ' ') ++p;
-                        if (p != '\0') has_error = true;
-                        opt = OPT_INSERT;
-                    }
-                }
+                if (str == ";") break;
+                insert_value.push_back(str);
             }
+            if (insert_value.size() != e_opt_tab->countCol())
+            {
+                cout << "can not insert" << endl;
+                return;
+            }
+            opt = OPT_INSERT;
         }
     }
     else if (str == "show") /// SHOW...
@@ -561,25 +533,20 @@ void Commander::exec()
             {
                 p = g_getword(p, str, false);
                 g_trim(str, ' ');
-                if (CURRENT_DB == NULL)
+                if (str.find('.') != string::npos)
                 {
-                    if (str.find('.') == string::npos) /// can't find db
-                    {
-                        g_plog(1046, S_ERROR, "3D000", str, 0);
-                        return;
-                    }
-                    string dbname = str.substr(0, str.find('.'));
-                    e_opt_db = loadDB(dbname);
+                    something = str.substr(0, str.find('.'));
                     str = str.substr(str.find('.') + 1);
-                    if (e_opt_db == NULL)
-                    {
-                        g_plog(1051, S_ERROR, "42S02", dbname + "." + str, 0);
-                        return;
-                    }
+                    e_opt_db = loadDB(something);
                 }
                 else
                 {
                     e_opt_db = CURRENT_DB;
+                }
+                if (e_opt_db == NULL)
+                {
+                    g_plog(1051, S_ERROR, "42S02", something + "." + str, 0);
+                    return;
                 }
                 e_opt_tab = e_opt_db->getTable(str);
                 if (e_opt_tab == NULL)
@@ -594,42 +561,187 @@ void Commander::exec()
     }
     else if (str == "select") /// SELECT...
     {
-        char *x = p, keyword[10] = " from ";
-        /// found FROM
-        if (x != NULL)
+        cout << "Field(s):";
+        string tmp = "";
+        while (cin >> tmp)
         {
-            while (*x == ' ') ++x;
-            string tmpstr = "";
-            // cout << "[S]" << *x << "[E]" << endl;
-            /// get fields
-            while (p != x)
-            {
-                if (*p == ',' || p+1 == x)
-                {
-                    // cout << "[S]" << tmpstr << "[E]" << endl;
-                    select_fields.push_back(g_trim(tmpstr, ' '));
-                    tmpstr.clear();
-                    ++p;
-                }
-                else
-                {
-                    tmpstr += *p;
-                    ++p;
-                }
-            }
-            /// get from and p + 4 to shift from
-            p += 4;
-            while (*p == ' ') ++p;
-            x = p;
+            if (tmp == ";") break;
+            select_fields.push_back(tmp);
         }
+        cout << "From:";
+        while (cin >> tmp)
+        {
+            if (tmp == ";") break;
+            select_tables.push_back(tmp);
+        }
+        cout << "Condition:";
+        while (cin >> tmp)
+        {
+            if (tmp == ";") break;
+            select_conditions.push_back(tmp);
+        }
+        opt = OPT_SELECT;
     }
 
 
     /** all check, now opt it */
     if (opt != OPT_NONE && !has_error)
     {
-        cout << "DB: " << e_opt_db->getName() << endl;
-        cout << "Table: " << e_opt_tab->getName() << endl;
+        switch(opt)
+        {
+        case OPT_ALTER_TABLE_ADD:
+            e_opt_tab->addField(*altercol);
+            e_opt_tab->writeFile();
+            break;
+        case OPT_ALTER_TABLE_DROP_COLUMN:
+            e_opt_tab->removeField(string(altercol->field));
+            e_opt_tab->writeFile();
+            break;
+        case OPT_CREATE_DATABASE:
+        {
+            createDB(something);
+            Table * db = SYSTEM_DB->getTable("db");
+            db->readFile();
+            vector<string> arow;
+            char buff[10];
+            sprintf(buff, "%d", db->countRow() + 1);
+            arow.push_back(buff);
+            arow.push_back(something);
+            arow.push_back("0");
+            db->pushRow(arow);
+            db->writeFile();
+            break;
+        }
+        case OPT_CREATE_TABLE:
+        {
+            Table * db = SYSTEM_DB->getTable("db");
+            db->readFile();
+            DataSet::iterator it = db->getRowIte();
+            int loc = db->getFieldLoc("db_name"), id;
+            string dbname = e_opt_db->getName();
+            while (! db->IteEnd(it))
+            {
+                if (strcmp((*it).at(loc), dbname.c_str()) == 0)
+                {
+                    loc = db->getFieldLoc("table_count");
+                    int c = atoi((*it).at(loc));
+                    sprintf((*it).at(loc), "%d", c + 1);
+                    id = atoi((*it).at(db->getFieldLoc("id")));
+                    break;
+                }
+                ++it;
+            }
+            Table * tab = SYSTEM_DB->getTable("table");
+            tab->readFile();
+            vector<string> arow;
+            char buff[10];
+            sprintf(buff, "%d", tab->countRow() + 1);
+            arow.push_back(buff);
+            sprintf(buff, "%d", id);
+            arow.push_back(buff);
+            arow.push_back(something);
+            sprintf(buff, "%d", createtab.size());
+            arow.push_back(buff);
+            tab->pushRow(arow);
+            tab->writeFile();
+            e_opt_tab = e_opt_db->addTable(something);
+            if (e_opt_tab == NULL)
+            {
+                cout << "Create Table Failure!" << endl;
+                return;
+            }
+            if (e_opt_tab->setFields(createtab) < 0)
+            {
+                cout << "Fail to set Fields!" << endl;
+                return;
+            }
+            e_opt_tab->writeFile();
+            break;
+        }
+        case OPT_CREATE_VIEW:
+            break;
+        case OPT_DROP_TABLE:
+        {
+            Table * db = SYSTEM_DB->getTable("db");
+            db->readFile();
+            DataSet::iterator it = db->getRowIte();
+            int loc = db->getFieldLoc("db_name");
+            string dbname = e_opt_db->getName();
+            while (! db->IteEnd(it))
+            {
+                if (strcmp((*it).at(loc), dbname.c_str()) == 0)
+                {
+                    loc = db->getFieldLoc("table_count");
+                    int c = atoi((*it).at(loc));
+                    sprintf((*it).at(loc), "%d", c - 1);
+                    break;
+                }
+                ++it;
+            }
+            Table * tab = SYSTEM_DB->getTable("table");
+            tab->readFile();
+            it = tab->getRowIte();
+            while(! tab->IteEnd(it))
+            {
+                int loc = tab->getFieldLoc("table_name");
+                if (strcmp((*it).at(loc), e_opt_tab->getName().c_str()) == 0)
+                {
+                    tab->removeRow(it);
+                    break;
+                }
+                ++it;
+            }
+            e_opt_db->removeTable(e_opt_tab->getName());
+            break;
+        }
+        case OPT_DROP_DATABASE:
+        {
+            Table * db = SYSTEM_DB->getTable("db");
+            db->readFile();
+            DataSet::iterator it = db->getRowIte();
+            int loc = db->getFieldLoc("db_name"), id;
+            while (! db->IteEnd(it))
+            {
+                if (strcmp((*it).at(loc), something.c_str()) == 0)
+                {
+                    id = atoi((*it).at(db->getFieldLoc("table_count")));
+                    db->removeRow(it);
+                    break;
+                }
+                ++it;
+            }
+            Table * tab = SYSTEM_DB->getTable("table");
+            tab->readFile();
+            it = tab->getRowIte();
+            loc = tab->getFieldLoc("db_id");
+            int dbid;
+            while(! tab->IteEnd(it))
+            {
+                dbid = atoi((*it).at(loc));
+                if (id == dbid)
+                {
+                    DataSet::iterator tmp = it;
+                    tab->removeRow(tmp);
+                }
+                ++it;
+            }
+            deleteDB(something);
+            break;
+        }
+        case OPT_INSERT:
+        {
+            /// insert
+            e_opt_tab->pushRow(insert_value);
+            e_opt_tab->writeFile();
+            break;
+        }
+        case OPT_SELECT:
+            ;
+            break;
+        default:
+            cout << "error" << endl;
+            break;
+        }
     }
     else
     {
@@ -679,6 +791,12 @@ int Commander::deleteDB(string dbname)
         int ret = _rmdir(dbpath.c_str());
         if (ret < 0)
         {
+            list<Database>::iterator beg, end = this->databases.end();
+            for (beg = this->databases.begin(); beg != end; ++beg)
+            {
+                if ((*beg).getName() == dbname)
+                    this->databases.erase(beg);
+            }
             dbpath += "\\";
             if(_chdir(dbpath.c_str()) == 0)
             {
@@ -857,4 +975,58 @@ void Commander::cp_loadSystemDB()
     {
         tmptab->readFile();
     }
+}
+
+int Commander::check_type(string &str, Column &s)
+{
+    if (str == "NULL")
+    {
+        if (strlen(s.default_val) > 0)
+        {
+            str = string(s.default_val);
+        }
+        else if (strcmp(s.null, "N")) return 0;
+        return 1;
+    }
+    switch(s.type)
+    {
+    case INT:
+    {
+        for (size_t i = 0; i < str.length(); ++i)
+        {
+            if (str[i] < '1' || str[i] > '9')
+            {
+                if (i == 0 && !s.u_sign && str[i] == '-') continue;
+                return -1;
+            }
+        }
+    }
+    case CHAR:
+    {
+        ;
+    }
+    case FLOAT:
+    {
+        if (str.find('.') != string::npos)
+            if (str.find('.', str.find('.')) != string::npos)
+                return -1;
+        for (size_t i = 0; i < str.length(); ++i)
+        {
+            if (str[i] == '.') continue;
+            if (str[i] < '1' || str[i] > '9')
+            {
+                if (i == 0 && !s.u_sign && str[i] == '-') continue;
+                return -1;
+            }
+        }
+    }
+    default:
+        return -999;
+        break;
+    }
+    if (s.length > (int)str.length())
+    {
+        return -2;
+    }
+    return 1;
 }

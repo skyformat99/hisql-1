@@ -107,6 +107,9 @@ public:
     bool addField(Column acol);
 
     int setFields(ColumnList& col);
+
+    ColumnList::iterator getColIte();
+    bool colIteEnd(ColumnList::iterator it);
 private:
     string name;
 

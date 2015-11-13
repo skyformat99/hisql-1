@@ -21,6 +21,16 @@ public:
         OPT_CREATE_USER, OPT_GRANT, OPT_REVOKE
     };
 
+    enum SelectPattern
+    {
+        SP_NONE,
+        SP_DISTINCT,
+        SP_FIELDS,
+        SP_TABLES,
+        SP_CONDI_WITH_WHERE,
+        SP_CONDI
+    };
+
     /** CURRENT DATABAES Pointer */
     Database * CURRENT_DB;
 
@@ -70,6 +80,9 @@ private:
 
     /** System function */
     void cp_nowStatus();
+
+    /** check data */
+    int check_type(string &str, Column &s);
 
     /** command line */
     char m_cmd_line[BUFFSIZE];
