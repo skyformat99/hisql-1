@@ -21,9 +21,11 @@ public:
     int renameTable(string tabname, string newname);
     int removeTable(string tabname);
     void printTables();
+    int openTable();
+
+    TableList m_tables;
 private:
     string name;
-    TableList m_tables;
 };
 
 #endif // DATABASE_H

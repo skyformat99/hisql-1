@@ -14,7 +14,7 @@ Database::Database(string dbname)
 
 Database::~Database()
 {
-    //dtor
+    this->m_tables.clear();
 }
 
 string Database::getName()
@@ -118,4 +118,9 @@ void Database::printTables()
         tmp.push_back((*beg).getName());
     }
     g_print_table(tmp, 1);
+}
+
+int Database::openTable()
+{
+    return this->m_tables.size();
 }

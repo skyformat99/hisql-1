@@ -50,6 +50,8 @@ public:
 
     Row* getRow(int row);
 
+    Row* getLastRow();
+
     bool printRow(DataSet::iterator it);
 
     bool removeRow(DataSet::iterator it);
@@ -71,6 +73,8 @@ public:
     int countCol();
 
     void showColumns();
+
+    void showRows();
 
     int writeFile();
 
@@ -110,12 +114,20 @@ public:
 
     ColumnList::iterator getColIte();
     bool colIteEnd(ColumnList::iterator it);
-private:
-    string name;
+
+    void clearAll();
+
+    bool dataCheck(string& data, Column &col);
+
+    bool readIndex(vector<Row *>& tmp, string indexname,string field);
+
+    bool writeIndex(string indexname, string field);
 
     DataSet m_data_array;
 
     ColumnList m_col_list;
+private:
+    string name;
 };
 
 #endif // TABLE_H

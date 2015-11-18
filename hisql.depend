@@ -1,7 +1,8 @@
 # depslib dependency file v1.0
-1447056216 source:e:\github\hisql\main.cpp
+1447654849 source:e:\github\hisql\main.cpp
 	<iostream>
 	<fstream>
+	<sstream>
 	<list>
 	<stdio.h>
 	<stdlib.h>
@@ -9,40 +10,42 @@
 	<time.h>
 	"Commander.h"
 
-1447376073 source:e:\github\hisql\src\commander.cpp
+1447817766 source:e:\github\hisql\src\commander.cpp
 	<iostream>
 	<stdio.h>
 	<stdlib.h>
 	<ctype.h>
 	<string.h>
+	<time.h>
 	<io.h>
 	"Commander.h"
 
-1447330188 e:\github\hisql\include\commander.h
+1447756144 e:\github\hisql\include\commander.h
 	"Table.h"
 	"Database.h"
 
-1446787238 source:e:\github\hisql\src\database.cpp
+1447762155 source:e:\github\hisql\src\database.cpp
 	<stdio.h>
 	"Database.h"
 
-1446353698 e:\github\hisql\include\database.h
+1447756449 e:\github\hisql\include\database.h
 	"common.h"
 	"Table.h"
 
-1447376158 source:e:\github\hisql\src\table.cpp
+1447764304 source:e:\github\hisql\src\table.cpp
 	<iostream>
 	<fstream>
 	<string>
 	<iomanip>
+	<algorithm>
 	<stdlib.h>
 	<string.h>
 	"Table.h"
 
-1447327874 e:\github\hisql\include\table.h
+1447756912 e:\github\hisql\include\table.h
 	"common.h"
 
-1446731072 source:e:\github\hisql\src\common.cpp
+1447658359 source:e:\github\hisql\src\common.cpp
 	<iostream>
 	<iomanip>
 	<list>
@@ -55,10 +58,12 @@
 	<io.h>
 	"common.h"
 
-1447326112 e:\github\hisql\include\common.h
+1447816436 e:\github\hisql\include\common.h
 	<iostream>
 	<list>
 	<vector>
+	<stdio.h>
+	<time.h>
 	<stdlib.h>
 	<string.h>
 

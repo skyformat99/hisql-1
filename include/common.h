@@ -5,6 +5,8 @@
 #include <list>
 #include <vector>
 
+#include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,6 +20,8 @@ using namespace std;
 #define D_BUFF_SIZE 1024
 
 #define VERSION "v1.0 Beta"
+
+#define DEBUG true
 
 extern char ROOTPATH[];
 extern char DBFPATH[];
@@ -73,6 +77,17 @@ bool g_file_dir(string filename, int type);
 
 void g_strlwr(char *p);
 
+void g_split(const string& s, char c, vector<string>& v);
+
+inline void g_shiftdot(string &str, char const c)
+{
+    while (str[0] == c && str[str.length() - 1] == c)
+    {
+        str = str.substr(1);
+        str = str.substr(0, (str.length() - 1));
+    }
+}
+
 inline string& g_trim(string &word, char c)
 {
     if (word.empty()) return word;
@@ -111,69 +126,61 @@ inline char* g_getword_mod(char *p, string &word, bool change_case, char const s
     return p;
 }
 
-inline int g_check_int(string &str, int lenght, string defval, bool unsign)
+inline int g_check_int(string& str, int lenght, bool unsign)
 {
     int len = str.length();
-    if (len == 0 || str == "NULL")
+    if (len == 1)
     {
-        str = defval;
-        return 0;
+        if (str[0] < '0' || str[0] > '9') return -3;
     }
-    if (len > lenght) return -3;
-    if (str[0] == '-' && unsign) return -1;
-    for (int i = 0; i < len; ++i)
-    {
-        if (str[i] < '0' || str[i] > '9') return -2;
-    }
+    bool positive = false;
+    if (str[0] == '-') positive = true;
+    int i;
+    for (i = positive ? 1 : 0; i < len; ++i)
+        if (str[i] < '0' || str[i] > '9') return -3;
+    if (unsign && positive) return -1;
+    if (len > lenght) return -2;
     return 1;
 }
 
-inline int g_check_float(string str, int lenght, string defval, bool unsign)
+inline int g_check_float(string& str, int lenght, bool unsign)
 {
     int len = str.length();
-    if (len == 0 || str == "NULL")
+    if (len == 1)
     {
-        str = defval;
-        return 0;
+        if (str[0] < '0' || str[0] > '9') return -3;
     }
-    if (len > lenght) return -3;
-    if (str[0] == '-' && unsign) return -1;
-    bool dot = false;
-    for (int i = 0; i < len; ++i)
+    bool positive = false, dot = false;
+    if (str[0] == '-') positive = true;
+    int i;
+    for (i = positive ? 1 : 0; i < len; ++i)
     {
         if (str[i] == '.')
         {
-            if (dot) return -2;
+            if (dot) return -3;
             dot = true;
             continue;
         }
-        if (str[i] < '0' || str[i] > '9') return -2;
+        if (str[i] < '0' || str[i] > '9') return -3;
     }
+    if (unsign && positive) return -1;
+    if (len > lenght) return -2;
     return 1;
 }
 
-inline int g_check_char(string str, int lenght, string defval)
+inline int g_check_char(string& str, int lenght)
 {
     int len = str.length();
-    if (len == 0 || str == "NULL")
-    {
-        str = defval;
-        return 0;
-    }
-    if (len > lenght) return -3;
+    if (len < 2) return -3;
+    if (str[0] != '\'' && str[len - 1] != '\'') return -3;
+    g_shiftdot(str, '\'');
+    len -= 2;
+    if (len == 0) return 0;
+    if (len >= lenght) return -2;
     return 1;
 }
 
-inline void g_shiftdot(string &str, char const c)
-{
-    while (str[0] == c && str[str.length() - 1] == c)
-    {
-        str = str.substr(1);
-        str = str.substr(0, (str.length() - 1));
-    }
-}
-
-inline int g_convert_col(string tmp, Column &col)
+inline bool g_convert_col(string tmp, Column &col)
 {
     strcpy(col.field, "");
     col.type = INT;
@@ -240,22 +247,26 @@ inline int g_convert_col(string tmp, Column &col)
             {
                 int ret = 0;
                 p = g_getword(p, str, true);
-                if (col.type == CHAR)
+                if (col.type == CHAR && str == "''") str == "NULL";
+                if (str == "NULL")
                 {
-                    if (str[0] == '\'' && str[str.length() - 1] == '\'')
-                    {
-                        g_shiftdot(str, '\'');
-                        ret = g_check_char(str, col.length, "");
-                    }
-                    else return false;
+                    if (strcmp(col.null, "N") == 0) return false;
+                    ret = 1;
                 }
-                else if (col.type == FLOAT)
+                switch (col.type)
                 {
-                    ret = g_check_float(str, col.length, "", col.u_sign);
-                }
-                else if (col.type == INT)
-                {
-                    ret = g_check_int(str, col.length, "", col.u_sign);
+                case INT:
+                    ret = g_check_int(str, col.length, col.u_sign);
+                    break;
+                case CHAR:
+                    ret = g_check_char(str, col.length);
+                    break;
+                case FLOAT:
+                    ret = g_check_float(str, col.length, col.u_sign);
+                    break;
+                default:
+                    return false;
+                    break;
                 }
                 if (ret < 0) return false;
                 strcpy(col.default_val, str.c_str());
@@ -281,6 +292,11 @@ inline int g_convert_col(string tmp, Column &col)
         strcpy(col.default_val, "");
     }
     return true;
+}
+
+inline void g_pok (int affected, clock_t start)
+{
+    printf("Query OK, %d row affected (%.2f sec)\n\n", affected, (float)(clock() - start) / CLOCKS_PER_SEC);
 }
 
 /// define the opt of relation

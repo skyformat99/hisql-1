@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <algorithm>
 
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,15 @@ Table::Table(string tabname, string dbname)
 Table::~Table()
 {
     //dtor
+    /**DataSet::iterator it = getRowIte();
+    while (! IteEnd(it))
+    {
+        for (size_t i = 0; i < (*it).size(); ++i)
+            delete (*it).at(i);
+        ++it;
+    }
+    this->m_col_list.clear();
+    this->m_data_array.clear();*/
 }
 
 string Table::getName()
@@ -95,6 +105,7 @@ Row* Table::pushRow(vector<string> &arow)
         ColumnList::iterator beg, end = this->m_col_list.end();
         for (beg = this->m_col_list.begin(); beg != end; ++beg)
         {
+            if (! this->dataCheck(arow.at(i), (*beg))) return NULL;
             char * tmp = new char[(*beg).length];
             strcpy(tmp, arow.at(i).c_str());
             tmprow.push_back(tmp);
@@ -107,7 +118,7 @@ Row* Table::pushRow(vector<string> &arow)
     }
     else
     {
-        cout << " this Row can not insert in this table." << endl;
+        cout << "Fatal: This Row can not insert in this table." << endl;
         return NULL;
     }
 }
@@ -240,12 +251,34 @@ void Table::showColumns()
     g_print_table(tmp, 6);
 }
 
+void Table::showRows()
+{
+    vector<string> tmp;
+    int count = 0;
+    ColumnList::iterator it = this->getColIte();
+    while (! this->colIteEnd(it))
+    {
+        tmp.push_back((*it).field);
+        ++it;
+        ++count;
+    }
+    DataSet::iterator rit = this->getRowIte();
+    while (! this->IteEnd(rit))
+    {
+        for (int i = 0; i < count; ++i)
+            tmp.push_back((*rit).at(i));
+        ++rit;
+    }
+    g_print_table(tmp, count);
+}
+
 int Table::writeFile()
 {
-    ofstream out(m_file_path.c_str(), ios::binary);
+    //if (g_file_dir(m_file_path, 0)) remove(m_file_path.c_str());
+    ofstream out(m_file_path.c_str(), ios::binary); //, ios::binary
     if (out.is_open())
     {
-        out.seekp(0);
+        //out.seekp(0);
         int rowlong = countRow(), collong = countCol();
         /// set data locate
         long dataloc = 0;
@@ -265,9 +298,15 @@ int Table::writeFile()
             /// write type
             switch((*cbeg).type)
             {
-            case INT: tmp = 'I';break;
-            case FLOAT: tmp = 'F';break;
-            default: tmp = 'C';break;
+            case INT:
+                tmp = 'I';
+                break;
+            case FLOAT:
+                tmp = 'F';
+                break;
+            default:
+                tmp = 'C';
+                break;
             }
             out.write(&tmp, sizeof(char));
             /// write length
@@ -311,14 +350,14 @@ int Table::writeFile()
 
 int Table::readFile()
 {
-    ifstream in(m_file_path.c_str());
+    ifstream in(m_file_path.c_str(), ios::binary);
     if (in.is_open())
     {
         if (in.eof())
         {
             return -1;
         }
-        in.seekg(0);
+        //in.seekg(0);
         /// get data set locate
         long dataloc = 0;
         in.read((char*)&dataloc, sizeof(long));
@@ -332,7 +371,6 @@ int Table::readFile()
             Column col;
             /// read field
             in.read(col.field, FIELD_MAX_SIZE * sizeof(char));
-
             char tmp = '\0';
             /// read unsigned
             in.read(&tmp, sizeof(char));
@@ -341,9 +379,15 @@ int Table::readFile()
             in.read(&tmp, sizeof(char));
             switch(tmp)
             {
-            case 'I': col.type = INT;break;
-            case 'F': col.type = FLOAT;break;
-            default: col.type = CHAR;break;
+            case 'I':
+                col.type = INT;
+                break;
+            case 'F':
+                col.type = FLOAT;
+                break;
+            default:
+                col.type = CHAR;
+                break;
             }
             /// read length
             in.read((char*)&col.length, sizeof(int));
@@ -396,6 +440,7 @@ Column* Table::getField(string field)
     {
         if (strcmp((*beg).field, field.c_str()) == 0)
         {
+            if (DEBUG) cout << (*beg).field << "][" << field << endl;
             return &(*beg);
         }
     }
@@ -534,6 +579,7 @@ bool Table::addField(Column acol)
         {
             char *x;
             x = new char[acol.length];
+            strcpy(x, acol.default_val);
             (*it).push_back(x);
             ++it;
         }
@@ -557,13 +603,147 @@ int Table::setFields(ColumnList& col)
     ColumnList::iterator beg = col.begin(), end = col.end();
     while (beg != end)
     {
-        if ( ! addField(*beg))
-        {
-            return -1;
-        }
+        this->m_col_list.push_back(*beg);
         ++beg;
     }
     return 0;
 }
 
+Row* Table::getLastRow()
+{
+    return &this->m_data_array.back();
+}
 
+void Table::clearAll()
+{
+    this->m_data_array.clear();
+}
+
+bool Table::dataCheck(string& data, Column &col)
+{
+    int len = data.length();
+    int ret = 0;
+    /// check null
+    if (data != "NULL" && col.type == CHAR)
+    {
+        if (len < 2)
+        {
+            cout << "Check Fail: data " << data << " "
+            << "is not a char type, field '" << col.field << "' is char." << endl;
+            return false;
+        }
+        if (data[0] != '\'' || data[len - 1] != '\'')
+        {
+            cout << "Check Fail: data " << data << " "
+            << "is not a char type, field '" << col.field << "' is char." << endl;
+            return false;
+        }
+        if (data == "''") data = "NULL";
+    }
+    if (data == "NULL" || len == 0)
+    {
+        if (strlen(col.default_val) != 0)
+        {
+            data = string(col.default_val);
+            return true;
+        }
+        if (strcmp(col.null, "Y") == 0)
+            return true;
+        cout << "Check Fail: data " << data << " "
+        << "is NULL, but field '" << col.field << "' can't be NULL." << endl;
+        return false;
+    }
+    /// check type and length
+    switch(col.type)
+    {
+    case INT:
+        ret = g_check_int(data, col.length, col.u_sign);
+        break;
+    case FLOAT:
+        ret = g_check_float(data, col.length, col.u_sign);
+        break;
+    case CHAR:
+        ret = g_check_char(data, col.length);
+        break;
+    default:
+        return false;
+        break;
+    }
+    if (ret < 0)
+    {
+        cout << "Check Fail: data '" << data << "' ";
+        switch (ret)
+        {
+        case 0:
+            cout << "is NULL, but field '" << col.field << "' can't be NULL." << endl;
+            break;
+        case -1:
+            cout << "is positive, but field '" << col.field << "' can't be positive." << endl;
+            break;
+        case -2:
+            cout << "is too long, but field '" << col.field << "' can't be bigger than " << col.length - 1 << "." << endl;
+            break;
+        case -3:
+            cout << "type check fail, maybe some illegal character." << endl;
+            break;
+        default:
+            cout << "unknown error." << endl;
+            break;
+        }
+        return false;
+    }
+    /// check primary key
+    if (strcmp(col.key, "PRI") == 0)
+    {
+        ret = this->getFieldLoc(col.field);
+        DataSet::iterator it = this->getRowIte();
+        while (!this->IteEnd(it))
+        {
+            if (strcmp((*it).at(ret), data.c_str()) == 0)
+            {
+                cout << "Check Primary Key Fail: "
+                << "'" << data << "' is repeat in Field '"
+                << col.field << "'!" << endl;
+                return false;
+                break;
+            }
+            ++it;
+        }
+    }
+    /// all check
+    return true;
+}
+
+bool Table::readIndex(vector<Row *>& tmp, string indexname,string field)
+{
+
+}
+
+bool Table::writeIndex(string indexname, string field)
+{
+    Column * col = getField(field);
+
+    if (col == NULL)
+    {
+        cout << "Fatal: no such field!" << endl;
+        return false;
+    }
+
+    int loc = getFieldLoc(field);
+
+    if (col->type == CHAR)
+    {
+        cout << "Fatal: Character can not be sort!" << endl;
+        return false;
+    }
+
+    string file_path = DBFPATH;
+    file_path = "\\" + this->m_dbname + "\\" + indexname + ".idx";
+
+    ofstream out(file_path.c_str());
+
+    if (out.is_open())
+    {
+
+    }
+}

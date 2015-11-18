@@ -9,27 +9,24 @@ class Commander
 public:
     string user;
 
-    enum Operation
+    enum DictOpt
     {
         OPT_NONE,
-        OPT_CREATE_DATABASE, OPT_DROP_DATABASE,
-        OPT_CREATE_TABLE,    OPT_DROP_TABLE,
-        OPT_CREATE_INDEX,    OPT_DROP_INDEX,
-        OPT_CREATE_VIEW,     OPT_DROP_VIEW,
-        OPT_ALTER_TABLE_ADD, OPT_ALTER_TABLE_DROP_COLUMN,
-        OPT_INSERT, OPT_DELETE, OPT_UPDATE, OPT_SELECT,
-        OPT_CREATE_USER, OPT_GRANT, OPT_REVOKE
+        OPT_ADD_FIELD,    OPT_DROP_FIELD,
+        OPT_ADD_TABLE,    OPT_DROP_TABLE,
+        OPT_ADD_DATABASE, OPT_DROP_DATABASE,
+        OPT_ADD_INDEX,    OPT_DROP_INDEX,
+        OPT_ADD_VIEW,     OPT_DROP_VIEW
     };
 
-    enum SelectPattern
-    {
-        SP_NONE,
-        SP_DISTINCT,
-        SP_FIELDS,
-        SP_TABLES,
-        SP_CONDI_WITH_WHERE,
-        SP_CONDI
-    };
+    /** */
+    vector<Row *> TMP_ROW;
+
+    /** OPERATION DATABAES Pointer */
+    Database * OPT_DB;
+
+    /** OPERATION TABLE Pointer */
+    Table * OPT_TABLE;
 
     /** CURRENT DATABAES Pointer */
     Database * CURRENT_DB;
@@ -67,6 +64,9 @@ public:
     /** change the current database */
     int changeDB(string dbname);
 
+    /** close table */
+    int closeDB(Table * tab);
+
     /** delete a database */
     int deleteDB(string dbname);
 private:
@@ -81,8 +81,11 @@ private:
     /** System function */
     void cp_nowStatus();
 
-    /** check data */
-    int check_type(string &str, Column &s);
+    /**  */
+    int cp_getDbTable(string &str);
+
+    /** build DB DICT */
+    int cp_buildDict(DictOpt opt, string info, int count);
 
     /** command line */
     char m_cmd_line[BUFFSIZE];

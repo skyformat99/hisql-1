@@ -51,7 +51,7 @@ void g_plog(int num, Status st, char const * code, string custom, int line)
         sprintf(content, "Unknown database '%s'\n", custom.c_str());
         break;
     case 1051:
-        sprintf(content, " Unknown table '%s'\n", custom.c_str());
+        sprintf(content, "Unknown table '%s'\n", custom.c_str());
         break;
     case 1064:
         sprintf(content, "You have an error in your SQL syntax; \
@@ -135,7 +135,7 @@ void g_print_table(vector<string> &target, int col = 1)
         cout << "Empty." << endl;
         return;
     }
-    if (tsize == 1)
+    if (tsize == col)
     {
         target.push_back("");
     }
@@ -274,4 +274,22 @@ void g_strlwr(char *p)
         (*p) += 32;
     }
 
+}
+
+void g_split(const string& s, char c, vector<string>& v)
+{
+    size_t i = 0;
+    size_t j = s.find(c);
+
+    while (j != string::npos)
+    {
+        v.push_back(s.substr(i, j - i));
+        i = ++j;
+        j = s.find(c, j);
+
+        if (j == string::npos)
+        {
+            v.push_back(s.substr(i, s.length()));
+        }
+    }
 }
